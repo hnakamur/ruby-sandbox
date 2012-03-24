@@ -35,9 +35,9 @@ class Command
   end
 
   def loop
-    done = false
-    until done
-      rs, ws = IO.select([stdout, stderr], [], [], 0.01)
+    reads = [stdout, stderr]
+    until reads.empty?
+      rs, ws = IO.select(reads, [], [], 0.01)
       next if rs.nil?
       rs.each{|r|
         begin
@@ -48,12 +48,11 @@ class Command
             on_extended_data self, ret
           end
         rescue EOFError
-          done = true
+          r.close
+          reads.delete r
         end
       }
     end
-    stdout.close
-    stderr.close
 
     status = Process.waitpid2(@pid).last
     @exitstatus = status.exitstatus
