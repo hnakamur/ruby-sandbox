@@ -1,54 +1,40 @@
 #!/usr/bin/env ruby
 
 class Command
-  attr_reader :info
-  attr_reader :history
-  attr_reader :outdata, :errdata
-
-  def initialize ()
-    @info = {}
-    @history = []
-    @data = []
-  end
-
   def do(*elem)
-    line = elem.join(" ")
-    time = Time.now
-
-    rp0, wp0 = IO.pipe
-    rp1, wp1 = IO.pipe
-    rp2, wp2 = IO.pipe
+    in_r, in_w = IO.pipe
+    out_r, out_w = IO.pipe
+    err_r, err_w = IO.pipe
     pid = Process.fork do
-      wp0.close
-      STDIN.reopen(rp0)
-      rp0.close
+      in_w.close
+      STDIN.reopen in_r
+      in_r.close
 
-      rp1.close
-      STDOUT.reopen(wp1)
-      wp1.close
+      out_r.close
+      STDOUT.reopen out_w
+      out_w.close
+      STDOUT.sync = true
 
-      rp2.close
-      STDERR.reopen(wp2)
-      wp2.close
-
-      STDOUT.sync = STDERR.sync = true
+      err_r.close
+      STDERR.reopen err_w
+      err_w.close
+      STDERR.sync = true
 
       exec *elem
     end
 
-#    wp0.puts "hello!"
-    rp0.close
-    wp1.close
-    wp2.close
+    in_r.close
+    out_w.close
+    err_w.close
     done = false
     until done
-      rs, ws = IO.select([rp1, rp2])
+      rs, ws = IO.select([out_r, err_r])
       rs.each{|r|
         begin
           ret = r.read_nonblock 4096
-          if r == rp1
+          if r == out_r
             on_data self, ret
-          elsif r == rp2
+          elsif r == err_r
             on_extended_data self, ret
           end
         rescue EOFError
@@ -56,17 +42,11 @@ class Command
         end
       }
     end
-#    @outdata = rp1.read
-#    @errdata = rp2.read
-    rp1.close
-    rp2.close
+    out_r.close
+    err_r.close
 
     status = Process.waitpid2.last
     status.exitstatus
-#    @info = { :line => line, :pid => pid, :status => status,
-#      :exitstatus => status.exitstatus, :time => time,
-#      :stdout => stdout.chomp, :stderr => stderr.chomp }
-#    @history.push(@info)
   end
 
   def on_data(ch, data)
@@ -81,18 +61,3 @@ end
 cmd = Command.new()
 ret = cmd.do "./a.sh"
 puts "exitcode is #{ret}"
-
-#cmd.do("ls -l", "/etc")
-#cmd.do("date")
-#cmd.do("ls -l noExistFile")
-
-#print "=== command history ===\n"
-#cmd.history.each do |h|
-#  print "time => ", h[:time], "\n"
-#  print "line => ", h[:line], "\n"
-#  print "exitstatus => ", h[:exitstatus], "\n"
-#  print "status => ", h[:status], "\n"
-#  print "stdout => ", h[:stdout], "\n"
-#  print "stderr => ", h[:stderr], "\n"
-#  print "-----\n\n"
-#end
