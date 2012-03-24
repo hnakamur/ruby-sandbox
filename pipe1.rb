@@ -47,9 +47,9 @@ class Command
         begin
           ret = r.read_nonblock 4096
           if r == rp1
-            @outdata = ret
+            on_data self, ret
           elsif r == rp2
-            @errdata = ret
+            on_extended_data self, ret
           end
         rescue EOFError
           done = true
@@ -62,17 +62,25 @@ class Command
     rp2.close
 
     status = Process.waitpid2.last
+    status.exitstatus
 #    @info = { :line => line, :pid => pid, :status => status,
 #      :exitstatus => status.exitstatus, :time => time,
 #      :stdout => stdout.chomp, :stderr => stderr.chomp }
 #    @history.push(@info)
   end
+
+  def on_data(ch, data)
+    puts "stdout: #{data}"
+  end
+
+  def on_extended_data(ch, data)
+    puts "stderr: #{data}"
+  end
 end
 
 cmd = Command.new()
-cmd.do("./a.sh")
-puts "outdata=#{cmd.outdata}"
-puts "errdata=#{cmd.errdata}"
+ret = cmd.do "./a.sh"
+puts "exitcode is #{ret}"
 
 #cmd.do("ls -l", "/etc")
 #cmd.do("date")

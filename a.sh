@@ -1,8 +1,8 @@
 #!/bin/bash
 #read line
 #echo $line
-#echo -n hi,
-#sleep 3
+echo -n hi,
+sleep 3
 echo there.
 echo line 1
 echo line 2
