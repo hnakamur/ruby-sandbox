@@ -28,7 +28,8 @@ class Command
     err_w.close
     done = false
     until done
-      rs, ws = IO.select([out_r, err_r])
+      rs, ws = IO.select([out_r, err_r], [], [], 0.01)
+      next if rs.nil?
       rs.each{|r|
         begin
           ret = r.read_nonblock 4096
@@ -51,10 +52,12 @@ class Command
 
   def on_data(ch, data)
     puts "stdout: #{data}"
+    STDOUT.flush
   end
 
   def on_extended_data(ch, data)
     puts "stderr: #{data}"
+    STDOUT.flush
   end
 end
 
