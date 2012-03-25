@@ -13,5 +13,16 @@ conn.open_channel { |channel|
     }
   }
 }
+conn.open_channel { |channel|
+  channel.exec('hostname') { |ch, success|
+    abort 'could not execute command' unless success
+    channel.on_data { |ch, data|
+      puts "hostname stdout: #{data}"
+    }
+    channel.on_extended_data { |ch, type, data|
+      puts "hostname stderr: #{data}"
+    }
+  }
+}
 
 conn.loop
