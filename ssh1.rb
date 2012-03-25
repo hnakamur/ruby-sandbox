@@ -11,7 +11,6 @@ connections = [
 ]
 
 connections.each do |ssh|
-  puts "host is #{ssh.host}"
   ssh.open_channel do |channel|
     channel.exec("vmstat 3 3") do |ch, success|
       abort "could not execute command" unless success
@@ -26,18 +25,30 @@ connections.each do |ssh|
       end
 
       channel.on_close do |ch|
-        puts "channel is closing!"
+        puts "#{ch.connection.host}: channel is closing!"
       end
 
       channel.on_request 'exit-status' do |ch, data|
-        puts "process terminated with exit status: #{data.read_long}"
+        puts "#{ch.connection.host}: exit status: #{data.read_long}"
       end
     end
   end
 end
 
-condition = Proc.new {|s| s.busy?}
-loop do
-  connections.delete_if {|ssh| !ssh.process(0.1, &condition)}
-  break if connections.empty?
+def run_and_wait(connections)
+  condition = Proc.new {|s| s.busy?}
+  cs = connections.clone
+  loop do
+    cs.delete_if {|ssh| !ssh.process(0.1, &condition)}
+    break if cs.empty?
+  end
 end
+
+run_and_wait connections
+
+connections.each do |ssh|
+  ssh.exec!("hostname").tap {|r|
+    puts "#{ssh.host} tapped: #{r}"
+  }
+end
+run_and_wait connections
