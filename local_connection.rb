@@ -44,7 +44,7 @@ class LocalConnection
         if reader == channel.stdout
           channel.do_data data
         elsif reader == channel.stderr
-          channel.do_extended_data data
+          channel.do_extended_data :stderr, data
         end
       rescue EOFError
         reader.close

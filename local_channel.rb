@@ -58,8 +58,8 @@ class LocalChannel
     @on_data.call self, data if @on_data
   end
 
-  def do_extended_data(data)
-    @on_extended_data.call self, data if @on_extended_data
+  def do_extended_data(type, data)
+    @on_extended_data.call self, type, data if @on_extended_data
   end
 
   def on_data(&block)
